@@ -1,0 +1,54 @@
+import request from '@/utils/request'
+
+// 查询公告列表
+export function listNotice(data) {
+  return request({
+    url: '/system/notice/list',
+    method: 'post',
+    data: data
+  })
+}
+
+// 分页查询公告列表
+export function pageNotice(data) {
+  return request({
+    url: '/system/notice/page',
+    method: 'post',
+    data: data
+  })
+}
+
+// 查询公告详细
+export function getNotice(noticeId) {
+  return request({
+    url: '/system/notice/' + noticeId,
+    method: 'get'
+  })
+}
+
+// 新增公告
+export function addNotice(data) {
+  return request({
+    url: '/system/notice',
+    method: 'post',
+    data: data
+  })
+}
+
+// 修改公告
+export function updateNotice(data) {
+  return request({
+    url: '/system/notice',
+    method: 'put',
+    data: data
+  })
+}
+
+// 删除公告
+export function delNotice(data) {
+  return request({
+    url: '/system/notice/remove',
+    method: 'delete',
+    data: data
+  })
+}
