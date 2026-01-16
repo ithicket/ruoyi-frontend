@@ -49,7 +49,7 @@
           <template #prefix><svg-icon icon-class="validCode" class="el-input__icon input-icon" /></template>
         </el-input>
         <div class="register-code">
-          <img :src="codeUrl" @click="getCode" class="register-code-img"/>
+          <img :src="codeUrl" @click="getCode" class="register-code-img" alt=""/>
         </div>
       </el-form-item>
       <el-form-item style="width:100%;">
@@ -78,6 +78,7 @@
 <script setup>
 import { ElMessageBox } from "element-plus"
 import { getCodeImg, register } from "@/api/login"
+import {useRouter} from "vue-router";
 
 const title = import.meta.env.VITE_APP_TITLE
 const router = useRouter()
@@ -91,7 +92,7 @@ const registerForm = ref({
   uuid: ""
 })
 
-const equalToPassword = (rule, value, callback) => {
+const equalToPassword = (_, value, callback) => {
   if (registerForm.value.password !== value) {
     callback(new Error("两次输入的密码不一致"))
   } else {
@@ -124,7 +125,7 @@ function handleRegister() {
   proxy.$refs.registerRef.validate(valid => {
     if (valid) {
       loading.value = true
-      register(registerForm.value).then(res => {
+      register(registerForm.value).then(_ => {
         const username = registerForm.value.username
         ElMessageBox.alert("<font color='red'>恭喜你，您的账号 " + username + " 注册成功！</font>", "系统提示", {
           dangerouslyUseHTMLString: true,
@@ -144,10 +145,11 @@ function handleRegister() {
 
 function getCode() {
   getCodeImg().then(res => {
-    captchaEnabled.value = res.captchaEnabled === undefined ? true : res.captchaEnabled
+    const data = res.data
+    captchaEnabled.value = data.captchaEnabled === undefined ? true : data.captchaEnabled
     if (captchaEnabled.value) {
-      codeUrl.value = "data:image/gif;base64," + res.img
-      registerForm.value.uuid = res.uuid
+      codeUrl.value = "data:image/gif;base64," + data.img
+      registerForm.value.uuid = data.uuid
     }
   })
 }
@@ -165,7 +167,7 @@ getCode()
   background-size: cover;
 }
 .title {
-  margin: 0px auto 30px auto;
+  margin: 0 auto 30px auto;
   text-align: center;
   color: #707070;
 }
@@ -184,7 +186,7 @@ getCode()
   .input-icon {
     height: 39px;
     width: 14px;
-    margin-left: 0px;
+    margin-left: 0;
   }
 }
 .register-tip {
