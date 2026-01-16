@@ -107,7 +107,7 @@ import { makeUpHtml, vueTemplate, vueScript, cssStyle } from '@/utils/generator/
 import { makeUpJs } from '@/utils/generator/js'
 import { makeUpCss } from '@/utils/generator/css'
 import Download from '@/plugins/download'
-import { ElNotification } from 'element-plus'
+import {ElMessage, ElNotification} from 'element-plus'
 import DraggableItem from './DraggableItem'
 import RightPanel from './RightPanel'
 import CodeTypeDialog from './CodeTypeDialog'
@@ -294,14 +294,14 @@ watch(activeId, (val) => {
 
 onMounted(() => {
   const clipboard = new ClipboardJS('#copyNode', {
-    text: trigger => {
+    text: _ => {
       const codeStr = generateCode()
       ElNotification({ title: '成功', message: '代码已复制到剪切板，可粘贴。', type: 'success' })
       return codeStr
     }
   })
-  clipboard.on('error', e => {
-    proxy.$modal.msgError('代码复制失败')
+  clipboard.on('error', _ => {
+    ElMessage.error('代码复制失败')
   })
 })
 </script>

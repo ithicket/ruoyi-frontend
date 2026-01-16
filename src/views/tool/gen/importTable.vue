@@ -32,7 +32,7 @@
         <el-table-column prop="tableComment" label="表描述" :show-overflow-tooltip="true"></el-table-column>
         <el-table-column prop="createTime" label="创建时间" align="center" width="160">
           <template #default="scope">
-            <span>{{ scope.row.createTime ? dayjs(scope.row.createTime).format("YYYY-MM-DD HH:mm:ss") : '--'}}</span>
+            <span>{{ parseDateTime(scope.row.createTime) }}</span>
           </template>
         </el-table-column>
         <el-table-column prop="updateTime" label="更新时间"></el-table-column>
@@ -56,9 +56,8 @@
 
 <script setup>
 import {importTable, pageDbTable} from "@/api/tool/gen"
-import {addDateRange} from "@/utils/ruoyi.js";
 import {ElMessage} from "element-plus";
-import dayjs from "dayjs";
+import {parseDateTime} from "@/utils/ruoyi.js";
 
 const total = ref(0)
 const visible = ref(false)
@@ -71,7 +70,7 @@ const pages = ref({
   pageSize: 10
 })
 
-const queryParams = reactive({
+const queryParams = ref({
   pages: pages,
   tableName: undefined,
   tableComment: undefined
@@ -97,7 +96,7 @@ function handleSelectionChange(selection) {
 
 /** 查询表数据 */
 function getList() {
-  pageDbTable(addDateRange(queryParams)).then(res => {
+  pageDbTable(queryParams.value).then(res => {
     dbTableList.value = res.data.records
     total.value = res.data.total
   })
@@ -111,7 +110,7 @@ function handleQuery() {
 
 /** 重置按钮操作 */
 function resetQuery() {
-  proxy.resetForm("queryRef")
+  proxy.$refs.queryRef && proxy.$refs.queryRef.resetFields()
   handleQuery()
 }
 
@@ -119,11 +118,10 @@ function resetQuery() {
 async function handleImportTable() {
   console.log(tables.value)
   const res = await importTable(tables.value)
-  ElMessage.success("导入成功")
   if (res.code === 200) {
     visible.value = false
     emit("ok")
-    ElMessage.success(res.message)
+    ElMessage.success("导入成功")
   } else {
     ElMessage.error(res.message)
   }

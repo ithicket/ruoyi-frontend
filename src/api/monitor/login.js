@@ -42,3 +42,12 @@ export function cleanLogin() {
     method: 'delete'
   })
 }
+
+export function sendLoginExport(data) {
+  return request({
+    url: '/monitor/login-log/export',
+    method: 'post',
+    data: data,
+    responseType: 'blob'
+  })
+}

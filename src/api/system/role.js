@@ -1,14 +1,5 @@
 import request from '@/utils/request'
 
-// 查询角色列表
-export function listRole(data) {
-  return request({
-    url: '/system/role/list',
-    method: 'post',
-    data: data
-  })
-}
-
 // 分页查询角色列表
 export function pageRole(data) {
   return request({
@@ -84,14 +75,6 @@ export function sendRoleExport(data) {
   })
 }
 
-// 查询角色已授权用户列表
-export function allocatedUserList(data) {
-  return request({
-    url: '/system/role/authUser/allocatedList',
-    method: 'post',
-    data: data
-  })
-}
 
 // 分页查询角色已授权用户列表
 export function allocatedUserPage(data) {
@@ -102,14 +85,7 @@ export function allocatedUserPage(data) {
   })
 }
 
-// 查询角色未授权用户列表
-export function unallocatedUserList(data) {
-  return request({
-    url: '/system/role/authUser/unallocatedList',
-    method: 'post',
-    data: data
-  })
-}
+
 
 // 分页查询角色未授权用户列表
 export function unallocatedUserPage(data) {

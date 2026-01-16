@@ -67,3 +67,13 @@ export function runJob(jobId, jobGroup) {
     data: data
   })
 }
+
+
+export function sendJobExport(data) {
+  return request({
+    url: '/monitor/job/export',
+    method: 'post',
+    data: data,
+    responseType: 'blob'
+  })
+}

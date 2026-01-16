@@ -36,34 +36,14 @@
       </el-form>
 
       <el-row :gutter="10" class="mb8">
-         <el-col :span="1.5">
-            <el-button
-               type="primary"
-               plain
-               icon="Plus"
-               @click="handleAdd"
-               v-hasPermi="['system:notice:add']"
-            >新增</el-button>
+         <el-col :span="1.5" v-if="hasPermission('system:notice:add')">
+            <el-button type="primary" plain icon="Plus" @click="handleAdd">新增</el-button>
          </el-col>
-         <el-col :span="1.5">
-            <el-button
-               type="success"
-               plain
-               icon="Edit"
-               :disabled="single"
-               @click="handleUpdate"
-               v-hasPermi="['system:notice:edit']"
-            >修改</el-button>
+         <el-col :span="1.5" v-if="hasPermission('system:notice:edit')">
+            <el-button type="success" plain icon="Edit" @click="handleUpdate" :disabled="single">修改</el-button>
          </el-col>
-         <el-col :span="1.5">
-            <el-button
-               type="danger"
-               plain
-               icon="Delete"
-               :disabled="multiple"
-               @click="handleDelete"
-               v-hasPermi="['system:notice:remove']"
-            >删除</el-button>
+         <el-col :span="1.5" v-if="hasPermission('system:notice:remove')">
+            <el-button type="danger" plain icon="Delete" @click="handleDelete" :disabled="multiple">删除</el-button>
          </el-col>
          <right-toolbar v-model:showSearch="showSearch" @queryTable="getList"></right-toolbar>
       </el-row>
@@ -95,8 +75,8 @@
          </el-table-column>
          <el-table-column label="操作" align="center" class-name="small-padding fixed-width">
             <template #default="scope">
-               <el-button link type="primary" icon="Edit" @click="handleUpdate(scope.row)" v-hasPermi="['system:notice:edit']">修改</el-button>
-               <el-button link type="primary" icon="Delete" @click="handleDelete(scope.row)" v-hasPermi="['system:notice:remove']" >删除</el-button>
+               <el-button link type="primary" icon="Edit" @click="handleUpdate(scope.row)" v-if="hasPermission('system:notice:edit')">修改</el-button>
+               <el-button link type="primary" icon="Delete" @click="handleDelete(scope.row)" v-if="hasPermission('system:notice:remove')">删除</el-button>
             </template>
          </el-table-column>
       </el-table>
@@ -158,10 +138,16 @@
    </div>
 </template>
 
-<script setup name="Notice">
+<script setup >
 import {getNotice, delNotice, addNotice, updateNotice, pageNotice} from "@/api/system/notice"
-import {addDateRange, parseTime} from "@/utils/ruoyi.js";
+import {parseTime} from "@/utils/ruoyi.js";
 import {ElMessage, ElMessageBox} from "element-plus";
+import {hasPermission} from "@/utils/permission.js";
+
+defineOptions({
+  name: 'Notice'
+})
+
 
 const { proxy } = getCurrentInstance()
 const { sys_notice_status, sys_notice_type } = proxy.useDict("sys_notice_status", "sys_notice_type")
@@ -203,7 +189,7 @@ const { form, rules } = toRefs(data)
 /** 查询公告列表 */
 function getList() {
   loading.value = true
-  pageNotice(addDateRange(queryParams.value)).then(response => {
+  pageNotice(queryParams.value).then(response => {
     noticeList.value = response.data.records
     total.value = response.data.total
     loading.value = false
@@ -225,7 +211,7 @@ function reset() {
     noticeContent: undefined,
     status: "0"
   }
-  proxy.resetForm("noticeRef")
+  proxy.$refs.noticeRef && proxy.$refs.noticeRef.resetFields()
 }
 
 /** 搜索按钮操作 */
@@ -236,7 +222,7 @@ function handleQuery() {
 
 /** 重置按钮操作 */
 function resetQuery() {
-  proxy.resetForm("queryRef")
+  proxy.$refs.queryRef && proxy.$refs.queryRef.resetFields()
   handleQuery()
 }
 

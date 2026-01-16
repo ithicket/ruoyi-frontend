@@ -27,32 +27,14 @@
       </el-form>
 
       <el-row :gutter="10" class="mb8">
-         <el-col :span="1.5">
-            <el-button
-               type="primary"
-               plain
-               icon="Plus"
-               @click="openSelectUser"
-               v-hasPermi="['system:role:add']"
-            >添加用户</el-button>
+         <el-col :span="1.5" v-if="hasPermission('system:role:add')">
+            <el-button type="primary" plain icon="Plus" @click="openSelectUser">添加用户</el-button>
+         </el-col>
+         <el-col :span="1.5" v-if="hasPermission('system:role:remove')">
+            <el-button type="danger" plain icon="CircleClose" @click="cancelAuthUserAll" :disabled="multiple">批量取消授权</el-button>
          </el-col>
          <el-col :span="1.5">
-            <el-button
-               type="danger"
-               plain
-               icon="CircleClose"
-               :disabled="multiple"
-               @click="cancelAuthUserAll"
-               v-hasPermi="['system:role:remove']"
-            >批量取消授权</el-button>
-         </el-col>
-         <el-col :span="1.5">
-            <el-button 
-               type="warning" 
-               plain 
-               icon="Close"
-               @click="handleClose"
-            >关闭</el-button>
+            <el-button type="warning" plain icon="Close" @click="handleClose">关闭</el-button>
          </el-col>
          <right-toolbar v-model:showSearch="showSearch" @queryTable="getList"></right-toolbar>
       </el-row>
@@ -75,7 +57,7 @@
          </el-table-column>
          <el-table-column label="操作" align="center" class-name="small-padding fixed-width">
             <template #default="scope">
-               <el-button link type="primary" icon="CircleClose" @click="cancelAuthUser(scope.row)" v-hasPermi="['system:role:remove']">取消授权</el-button>
+               <el-button link type="primary" icon="CircleClose" @click="cancelAuthUser(scope.row)" v-if="hasPermission('system:role:remove')">取消授权</el-button>
             </template>
          </el-table-column>
       </el-table>
@@ -93,11 +75,11 @@
 
 <script setup>
 import selectUser from "./selectUser"
-import {allocatedUserPage, authUserCancel, authUserCancelAll, delRole} from "@/api/system/role"
-import {addDateRange} from "@/utils/ruoyi.js";
+import {allocatedUserPage, authUserCancel, authUserCancelAll} from "@/api/system/role"
 import {useRoute} from "vue-router";
 import dayjs from "dayjs";
 import {ElMessage, ElMessageBox} from "element-plus";
+import {hasPermission} from "@/utils/permission.js";
 
 defineOptions({
   name: 'AuthUser'
@@ -120,7 +102,7 @@ const pages = ref({
   pageSize: 10
 })
 
-const queryParams = reactive({
+const queryParams = ref({
   pages: pages,
   roleId: route.params.roleId,
   userName: undefined,
@@ -130,7 +112,7 @@ const queryParams = reactive({
 /** 查询授权用户列表 */
 function getList() {
   loading.value = true
-  allocatedUserPage(addDateRange(queryParams)).then(response => {
+  allocatedUserPage(queryParams.value).then(response => {
     userList.value = response.data.records
     total.value = response.data.total
     loading.value = false
@@ -151,7 +133,7 @@ function handleQuery() {
 
 /** 重置按钮操作 */
 function resetQuery() {
-  proxy.resetForm("queryRef")
+  proxy.$refs.queryRef && proxy.$refs.queryRef.resetFields()
   handleQuery()
 }
 
@@ -168,18 +150,23 @@ function openSelectUser() {
 
 /** 取消授权按钮操作 */
 function cancelAuthUser(row) {
-  proxy.$modal.confirm('确认要取消该用户"' + row.userName + '"角色吗？').then(function () {
-    return authUserCancel({ userId: row.userId, roleId: queryParams.roleId })
+  ElMessageBox.confirm('确认要取消该用户"' + row.userName + '"角色吗？', '提示', {
+    confirmButtonText: '确定',
+    cancelButtonText: '取消',
+    type: 'warning'
+  }).then(() => {
+    return authUserCancel({ userId: row.userId, roleId: queryParams.value.roleId })
   }).then(() => {
     getList()
-    proxy.$modal.msgSuccess("取消授权成功")
-  }).catch(() => {})
+    ElMessage.success("取消授权成功")
+  }).catch(() => {
+  })
 }
 
 /** 批量取消授权按钮操作 */
 function cancelAuthUserAll(row) {
-  const roleId = queryParams.roleId
-  ElMessageBox.confirm('是否取消选中用户授权数据项?', '提示', {
+  const roleId = queryParams.value.roleId
+  ElMessageBox.confirm('是否取消选中用户"' + row.userName + '"授权数据项?', '提示', {
     confirmButtonText: '确定',
     cancelButtonText: '取消',
     type: 'warning'

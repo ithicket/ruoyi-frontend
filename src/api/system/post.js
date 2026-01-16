@@ -52,3 +52,13 @@ export function delPost(data) {
     data: data
   })
 }
+
+
+export function sendPostExport(data) {
+  return request({
+    url: '/system/post/export',
+    method: 'post',
+    data: data,
+    responseType: 'blob'
+  })
+}

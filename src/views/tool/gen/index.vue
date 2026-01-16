@@ -21,7 +21,7 @@
       </el-form-item>
       <el-form-item label="创建时间" style="width: 308px">
         <el-date-picker
-          v-model="dateRange"
+          v-model="queryParams.dateRange"
           value-format="YYYY-MM-DD"
           type="daterange"
           range-separator="-"
@@ -36,53 +36,20 @@
     </el-form>
 
     <el-row :gutter="10" class="mb8">
-      <el-col :span="1.5">
-        <el-button
-          type="primary"
-          plain
-          icon="Download"
-          :disabled="multiple"
-          @click="handleGenTable"
-          v-hasPermi="['tool:gen:code']"
-        >生成</el-button>
+      <el-col :span="1.5" v-if="hasPermission('tool:gen:code')">
+        <el-button type="primary" plain icon="Download" @click="handleGenTable" :disabled="multiple">生成</el-button>
       </el-col>
-      <el-col :span="1.5">
-        <el-button
-          type="primary"
-          plain
-          icon="Plus"
-          @click="openCreateTable"
-          v-hasRole="['admin']"
-        >创建</el-button>
+      <el-col :span="1.5" v-if="hasPermission('admin')">
+        <el-button type="primary" plain icon="Plus" @click="openCreateTable">创建</el-button>
       </el-col>
-      <el-col :span="1.5">
-        <el-button
-          type="info"
-          plain
-          icon="Upload"
-          @click="openImportTable"
-          v-hasPermi="['tool:gen:import']"
-        >导入</el-button>
+      <el-col :span="1.5" v-if="hasPermission('tool:gen:import')">
+        <el-button type="info" plain icon="Upload" @click="openImportTable" >导入</el-button>
       </el-col>
-      <el-col :span="1.5">
-        <el-button
-          type="success"
-          plain
-          icon="Edit"
-          :disabled="single"
-          @click="handleEditTable"
-          v-hasPermi="['tool:gen:edit']"
-        >修改</el-button>
+      <el-col :span="1.5" v-if="hasPermission('tool:gen:edit')">
+        <el-button type="success" plain icon="Edit" @click="handleEditTable" :disabled="single">修改</el-button>
       </el-col>
-      <el-col :span="1.5">
-        <el-button
-          type="danger"
-          plain
-          icon="Delete"
-          :disabled="multiple"
-          @click="handleDelete"
-          v-hasPermi="['tool:gen:remove']"
-        >删除</el-button>
+      <el-col :span="1.5" v-if="hasPermission('tool:gen:remove')">
+        <el-button type="danger" plain icon="Delete" @click="handleDelete" :disabled="multiple">删除</el-button>
       </el-col>
       <right-toolbar v-model:showSearch="showSearch" @queryTable="getList"></right-toolbar>
     </el-row>
@@ -99,26 +66,30 @@
       <el-table-column label="实体" align="center" prop="className" :show-overflow-tooltip="true" />
       <el-table-column prop="createTime" label="创建时间" align="center" width="160" sortable="custom" :sort-orders="['descending', 'ascending']">
         <template #default="scope">
-          <span>{{ scope.row.createTime ? dayjs(scope.row.createTime).format("YYYY-MM-DD HH:mm:ss") : '--'}}</span>
+          <span>{{ parseDateTime(scope.row.createTime) }}</span>
         </template>
       </el-table-column>
-      <el-table-column label="更新时间" align="center" prop="updateTime" width="160" sortable="custom" :sort-orders="['descending', 'ascending']" />
+      <el-table-column label="更新时间" align="center" prop="updateTime" width="160" sortable="custom" :sort-orders="['descending', 'ascending']" >
+        <template #default="scope">
+          <span>{{ parseDateTime(scope.row.updateTime) }}</span>
+        </template>
+      </el-table-column>
       <el-table-column label="操作" align="center" width="330" class-name="small-padding fixed-width">
         <template #default="scope">
-          <el-tooltip content="预览" placement="top">
-            <el-button link type="primary" icon="View" @click="handlePreview(scope.row)" v-hasPermi="['tool:gen:preview']"></el-button>
+          <el-tooltip content="预览" placement="top" v-if="hasPermission('tool:gen:preview')">
+            <el-button link type="primary" icon="View" @click="handlePreview(scope.row)"/>
           </el-tooltip>
-          <el-tooltip content="编辑" placement="top">
-            <el-button link type="primary" icon="Edit" @click="handleEditTable(scope.row)" v-hasPermi="['tool:gen:edit']"></el-button>
+          <el-tooltip content="编辑" placement="top" v-if="hasPermission('tool:gen:edit')">
+            <el-button link type="primary" icon="Edit" @click="handleEditTable(scope.row)"/>
           </el-tooltip>
-          <el-tooltip content="删除" placement="top">
-            <el-button link type="primary" icon="Delete" @click="handleDelete(scope.row)" v-hasPermi="['tool:gen:remove']"></el-button>
+          <el-tooltip content="删除" placement="top" v-if="hasPermission('tool:gen:remove')">
+            <el-button link type="primary" icon="Delete" @click="handleDelete(scope.row)"/>
           </el-tooltip>
-          <el-tooltip content="同步" placement="top">
-            <el-button link type="primary" icon="Refresh" @click="handleSynchDb(scope.row)" v-hasPermi="['tool:gen:edit']"></el-button>
+          <el-tooltip content="同步" placement="top" v-if="hasPermission('tool:gen:edit')">
+            <el-button link type="primary" icon="Refresh" @click="handleSynchDb(scope.row)"/>
           </el-tooltip>
-          <el-tooltip content="生成代码" placement="top">
-            <el-button link type="primary" icon="Download" @click="handleGenTable(scope.row)" v-hasPermi="['tool:gen:code']"></el-button>
+          <el-tooltip content="生成代码" placement="top" v-if="hasPermission('tool:gen:code')">
+            <el-button link type="primary" icon="Download" @click="handleGenTable(scope.row)"/>
           </el-tooltip>
         </template>
       </el-table-column>
@@ -149,12 +120,18 @@
   </div>
 </template>
 
-<script setup name="Gen">
+<script setup>
 import {previewTable, delTable, genCode, synchDb, pageTable} from "@/api/tool/gen"
 import importTable from "./importTable"
 import createTable from "./createTable"
-import {addDateRange} from "@/utils/ruoyi.js";
-import dayjs from "dayjs";
+import {useRoute} from "vue-router";
+import {ElMessage, ElMessageBox} from "element-plus";
+import {hasPermission} from "@/utils/permission.js";
+import {parseDateTime} from "@/utils/ruoyi.js";
+
+defineOptions({
+  name: 'Gen'
+})
 
 const route = useRoute()
 const { proxy } = getCurrentInstance()
@@ -167,7 +144,6 @@ const single = ref(true)
 const multiple = ref(true)
 const total = ref(0)
 const tableNames = ref([])
-const dateRange = ref([])
 const uniqueId = ref("")
 const defaultSort = ref({ prop: "createTime", order: "descending" })
 
@@ -181,6 +157,7 @@ const pages = ref({
 // 查询参数
 const queryParams = ref({
   pages: pages,
+  dateRange: [],
   tableName: undefined,
   tableComment: undefined,
 })
@@ -198,10 +175,10 @@ const { preview } = toRefs(data)
 
 onActivated(() => {
   const time = route.query.t
-  if (time != null && time != uniqueId.value) {
+  if (time != null && time !== uniqueId.value) {
     uniqueId.value = time
     pages.value.pageNum = Number(route.query.pageNum)
-    dateRange.value = []
+    queryParams.value.dateRange = []
     proxy.resetForm("queryForm")
     getList()
   }
@@ -210,7 +187,7 @@ onActivated(() => {
 /** 查询表集合 */
 function getList() {
   loading.value = true
-  pageTable(addDateRange(queryParams.value, dateRange.value)).then(response => {
+  pageTable(queryParams.value).then(response => {
     tableList.value = response.data.records
     total.value = response.data.total
     loading.value = false
@@ -224,16 +201,15 @@ function handleQuery() {
 }
 
 /** 生成代码操作 */
-function handleGenTable(row) {
+async function handleGenTable(row) {
   const tbNames = row.tableName || tableNames.value
-  if (tbNames == "") {
-    proxy.$modal.msgError("请选择要生成的数据")
+  if (tbNames === "") {
+    ElMessage.success("请选择要生成的数据")
     return
   }
   if (row.genType === "1") {
-    genCode(row.tableName).then(response => {
-      proxy.$modal.msgSuccess("成功生成到自定义路径：" + row.genPath)
-    })
+    await genCode(row.tableName)
+    ElMessage.success("成功生成到自定义路径：" + row.genPath)
   } else {
     proxy.$download.zip("/tool/gen/batchGenCode?tables=" + tbNames, "ruoyi.zip")
   }
@@ -242,11 +218,16 @@ function handleGenTable(row) {
 /** 同步数据库操作 */
 function handleSynchDb(row) {
   const tableName = row.tableName
-  proxy.$modal.confirm('确认要强制同步"' + tableName + '"表结构吗？').then(function () {
+  ElMessageBox.confirm('确认要强制同步"' + tableName + '"表结构吗？', '提示', {
+    confirmButtonText: '确定',
+    cancelButtonText: '取消',
+    type: 'warning'
+  }).then(() => {
     return synchDb(tableName)
   }).then(() => {
-    proxy.$modal.msgSuccess("同步成功")
-  }).catch(() => {})
+    ElMessage.success("同步成功")
+  }).catch(() => {
+  })
 }
 
 /** 打开导入表弹窗 */
@@ -261,8 +242,8 @@ function openCreateTable() {
 
 /** 重置按钮操作 */
 function resetQuery() {
-  dateRange.value = []
-  proxy.resetForm("queryRef")
+  proxy.$refs.queryRef && proxy.$refs.queryRef.resetFields()
+  queryParams.value.dateRange = []
   pages.value.pageNum = 1
   proxy.$refs["genRef"].sort(defaultSort.value.prop, defaultSort.value.order)
 }
@@ -278,19 +259,19 @@ function handlePreview(row) {
 
 /** 复制代码成功 */
 function copyTextSuccess() {
-  proxy.$modal.msgSuccess("复制成功")
+  ElMessage.success("复制成功")
 }
 
 // 多选框选中数据
 function handleSelectionChange(selection) {
   ids.value = selection.map(item => item.tableId)
   tableNames.value = selection.map(item => item.tableName)
-  single.value = selection.length != 1
+  single.value = selection.length !== 1
   multiple.value = !selection.length
 }
 
 /** 排序触发事件 */
-function handleSortChange(column, prop, order) {
+function handleSortChange(column) {
   pages.value.orderByColumn = column.prop
   pages.value.isAsc = column.order
   getList()
@@ -307,12 +288,17 @@ function handleEditTable(row) {
 /** 删除按钮操作 */
 function handleDelete(row) {
   const tableIds = row.tableId || ids.value
-  proxy.$modal.confirm('是否确认删除表编号为"' + tableIds + '"的数据项？').then(function () {
+  ElMessageBox.confirm('是否确认删除表编号为"' + tableIds + '"的数据项？', '提示', {
+    confirmButtonText: '确定',
+    cancelButtonText: '取消',
+    type: 'warning'
+  }).then(() => {
     return delTable(tableIds)
   }).then(() => {
     getList()
-    proxy.$modal.msgSuccess("删除成功")
-  }).catch(() => {})
+    ElMessage.success("删除成功")
+  }).catch(() => {
+  })
 }
 
 getList()

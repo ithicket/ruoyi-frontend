@@ -60,3 +60,13 @@ export function delData(data) {
     data:data
   })
 }
+
+
+export function sendDictDataExport(data) {
+  return request({
+    url: '/system/dict/data/export',
+    method: 'post',
+    data: data,
+    responseType: 'blob'
+  })
+}

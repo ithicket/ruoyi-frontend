@@ -60,13 +60,12 @@
          </el-form-item>
          <el-form-item label="操作时间" style="width: 308px">
             <el-date-picker
-               v-model="dateRange"
-               value-format="YYYY-MM-DD HH:mm:ss"
+               v-model="queryParams.dateRange"
+               value-format="YYYY-MM-DD"
                type="daterange"
                range-separator="-"
                start-placeholder="开始日期"
                end-placeholder="结束日期"
-               :default-time="[new Date(2000, 1, 1, 0, 0, 0), new Date(2000, 1, 1, 23, 59, 59)]"
             ></el-date-picker>
          </el-form-item>
          <el-form-item>
@@ -76,38 +75,19 @@
       </el-form>
 
       <el-row :gutter="10" class="mb8">
-         <el-col :span="1.5">
-            <el-button
-               type="danger"
-               plain
-               icon="Delete"
-               :disabled="multiple"
-               @click="handleDelete"
-               v-hasPermi="['monitor:operlog:remove']"
-            >删除</el-button>
+        <el-col :span="1.5" v-if="hasPermission('monitor:operlog:remove')">
+            <el-button type="danger" plain icon="Delete" @click="handleDelete" :disabled="multiple">删除</el-button>
          </el-col>
-         <el-col :span="1.5">
-            <el-button
-               type="danger"
-               plain
-               icon="Delete"
-               @click="handleClean"
-               v-hasPermi="['monitor:operlog:remove']"
-            >清空</el-button>
+        <el-col :span="1.5" v-if="hasPermission('monitor:operlog:remove')">
+            <el-button type="danger" plain icon="Delete" @click="handleClean">清空</el-button>
          </el-col>
-         <el-col :span="1.5">
-            <el-button
-               type="warning"
-               plain
-               icon="Download"
-               @click="handleExport"
-               v-hasPermi="['monitor:operlog:export']"
-            >导出</el-button>
+        <el-col :span="1.5" v-if="hasPermission('monitor:operlog:export')">
+            <el-button type="warning" plain icon="Download" @click="handleExport">导出</el-button>
          </el-col>
          <right-toolbar v-model:showSearch="showSearch" @queryTable="getList"></right-toolbar>
       </el-row>
 
-      <el-table ref="operlogRef" v-loading="loading" :data="operLogList" @selection-change="handleSelectionChange" :default-sort="defaultSort" @sort-change="handleSortChange">
+      <el-table ref="operLogRef" v-loading="loading" :data="operLogList" @selection-change="handleSelectionChange" :default-sort="defaultSort" @sort-change="handleSortChange">
          <el-table-column type="selection" width="50" align="center" />
          <el-table-column label="日志编号" align="center" prop="operId" />
          <el-table-column label="系统模块" align="center" prop="title" :show-overflow-tooltip="true" />
@@ -125,7 +105,7 @@
          </el-table-column>
          <el-table-column label="操作日期" align="center" prop="operTime" width="180" sortable="custom" :sort-orders="['descending', 'ascending']">
             <template #default="scope">
-               <span>{{ parseTime(scope.row.operTime) }}</span>
+              <span>{{ scope.row.operTime ? dayjs(scope.row.operTime).format("YYYY-MM-DD HH:mm:ss") : '--'}}</span>
             </template>
          </el-table-column>
          <el-table-column label="消耗时间" align="center" prop="costTime" width="110" :show-overflow-tooltip="true" sortable="custom" :sort-orders="['descending', 'ascending']">
@@ -135,7 +115,7 @@
          </el-table-column>
          <el-table-column label="操作" align="center" class-name="small-padding fixed-width">
             <template #default="scope">
-               <el-button link type="primary" icon="View" @click="handleView(scope.row, scope.index)" v-hasPermi="['monitor:operlog:query']">详细</el-button>
+               <el-button link type="primary" icon="View" @click="handleView(scope.row, scope.index)" v-if="hasPermission('monitor:operlog:query')">详细</el-button>
             </template>
          </el-table-column>
       </el-table>
@@ -181,7 +161,7 @@
                   <el-form-item label="消耗时间：">{{ form.costTime }}毫秒</el-form-item>
                </el-col>
                <el-col :span="8">
-                  <el-form-item label="操作时间：">{{ parseTime(form.operTime) }}</el-form-item>
+                  <el-form-item label="操作时间：">{{ dayjs(form.operTime).format("YYYY-MM-DD HH:mm:ss") }}</el-form-item>
                </el-col>
                <el-col :span="24">
                   <el-form-item label="异常信息：" v-if="form.status === 1">{{ form.errorMsg }}</el-form-item>
@@ -198,9 +178,10 @@
 </template>
 
 <script setup>
-import {delOperLog, cleanOperLog, pageLog} from "@/api/monitor/operlog"
-import {addDateRange} from "@/utils/ruoyi.js";
+import {delOperLog, cleanOperLog, pageLog, sendOperLogExport} from "@/api/monitor/operlog"
 import {ElMessage, ElMessageBox} from "element-plus";
+import dayjs from "dayjs";
+import {hasPermission} from "@/utils/permission.js";
 
 defineOptions({
   name: 'OperLog'
@@ -214,11 +195,8 @@ const open = ref(false)
 const loading = ref(true)
 const showSearch = ref(true)
 const ids = ref([])
-const single = ref(true)
 const multiple = ref(true)
 const total = ref(0)
-const title = ref("")
-const dateRange = ref([])
 const defaultSort = ref({ prop: "operTime", order: "descending" })
 
 const pages = ref({
@@ -231,6 +209,7 @@ const pages = ref({
 // 查询参数
 const queryParams = ref({
   pages: pages,
+  dateRange: [],
   operIp: undefined,
   title: undefined,
   operName: undefined,
@@ -247,7 +226,7 @@ const { form } = toRefs(data)
 /** 查询登录日志 */
 function getList() {
   loading.value = true
-  pageLog(addDateRange(queryParams.value, dateRange.value)).then(response => {
+  pageLog(queryParams.value).then(response => {
     operLogList.value = response.data.records
     total.value = response.data.total
     loading.value = false
@@ -267,10 +246,10 @@ function handleQuery() {
 
 /** 重置按钮操作 */
 function resetQuery() {
-  dateRange.value = []
-  proxy.resetForm("queryRef")
+  proxy.$refs.queryRef && proxy.$refs.queryRef.resetFields()
+  queryParams.value.dateRange = []
   pages.value.pageNum = 1
-  proxy.$refs["operlogRef"].sort(defaultSort.value.prop, defaultSort.value.order)
+  proxy.$refs["operLogRef"].sort(defaultSort.value.prop, defaultSort.value.order)
 }
 
 /** 多选框选中数据 */
@@ -323,9 +302,11 @@ function handleClean() {
 
 /** 导出按钮操作 */
 function handleExport() {
-  proxy.download("monitor/operlog/export",{
-    ...queryParams.value,
-  }, `config_${new Date().getTime()}.xlsx`)
+  sendOperLogExport(queryParams.value)
+      .then(response => {
+        saveAs(response, `操作日志导出_${new Date().toLocaleString('zh-CN')}.xlsx`)
+        ElMessage.success('Success')
+      })
 }
 
 getList()

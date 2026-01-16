@@ -35,8 +35,13 @@
                 </el-select>
               </el-form-item>
               <el-form-item label="创建时间" style="width: 308px">
-                <el-date-picker v-model="dateRange" value-format="YYYY-MM-DD" type="daterange" range-separator="-"
-                                start-placeholder="开始日期" end-placeholder="结束日期"></el-date-picker>
+                <el-date-picker
+                    v-model="queryParams.dateRange"
+                    value-format="YYYY-MM-DD"
+                    type="daterange"
+                    range-separator="-"
+                    start-placeholder="开始日期"
+                    end-placeholder="结束日期"/>
               </el-form-item>
               <el-form-item>
                 <el-button type="primary" icon="Search" @click="handleQuery">搜索</el-button>
@@ -86,7 +91,9 @@
               </el-table-column>
               <el-table-column label="创建时间" align="center" prop="createTime" v-if="columns[6].visible" width="160">
                 <template #default="scope">
-                  <span>{{ scope.row.createTime ? dayjs(scope.row.createTime).format("YYYY-MM-DD HH:mm:ss") : '--' }}</span>
+                  <span>{{
+                      scope.row.createTime ? dayjs(scope.row.createTime).format("YYYY-MM-DD HH:mm:ss") : '--'
+                    }}</span>
                 </template>
               </el-table-column>
               <el-table-column label="操作" align="center" width="150" class-name="small-padding fixed-width">
@@ -260,7 +267,6 @@ import {
 } from "@/api/system/user"
 import {Splitpanes, Pane} from "splitpanes"
 import "splitpanes/dist/splitpanes.css"
-import {addDateRange} from "@/utils/ruoyi.js";
 import {ElMessage, ElMessageBox} from "element-plus";
 import {UploadFilled} from "@element-plus/icons-vue";
 import dayjs from "dayjs";
@@ -285,7 +291,6 @@ const single = ref(true)
 const multiple = ref(true)
 const total = ref(0)
 const title = ref("")
-const dateRange = ref([])
 const deptName = ref("")
 const deptOptions = ref(undefined)
 const enabledDeptOptions = ref(undefined)
@@ -325,6 +330,7 @@ const pages = ref({
 
 const queryParams = ref({
   pages: pages,
+  dateRange: [],
   userName: undefined,
   phone: undefined,
   status: undefined,
@@ -368,7 +374,7 @@ watch(deptName, val => {
 /** 查询用户列表 */
 function getList() {
   loading.value = true
-  pageUser(addDateRange(queryParams.value, dateRange.value)).then(res => {
+  pageUser(queryParams.value).then(res => {
     loading.value = false
     userList.value = res.data.records
     total.value = res.data.total
@@ -410,8 +416,8 @@ function handleQuery() {
 
 /** 重置按钮操作 */
 function resetQuery() {
-  dateRange.value = []
-  proxy.resetForm("queryRef")
+  proxy.$refs.queryRef && proxy.$refs.queryRef.resetFields()
+  queryParams.value.dateRange = []
   queryParams.value.deptId = undefined
   proxy.$refs.deptTreeRef.setCurrentKey(null)
   handleQuery()

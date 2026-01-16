@@ -27,24 +27,11 @@
     </el-form>
 
     <el-row :gutter="10" class="mb8">
-      <el-col :span="1.5">
-        <el-button
-            type="primary"
-            plain
-            icon="Plus"
-            @click="handleAdd"
-            v-hasPermi="['system:menu:add']"
-        >新增
-        </el-button>
+      <el-col :span="1.5" v-if="hasPermission('system:menu:add')">
+        <el-button type="primary" plain icon="Plus" @click="handleAdd"> 新增 </el-button>
       </el-col>
-      <el-col :span="1.5">
-        <el-button
-            type="info"
-            plain
-            icon="Sort"
-            @click="toggleExpandAll"
-        >展开/折叠
-        </el-button>
+      <el-col :span="1.5" >
+        <el-button type="info" plain icon="Sort" @click="toggleExpandAll"> 展开/折叠 </el-button>
       </el-col>
       <right-toolbar v-model:showSearch="showSearch" @queryTable="getList"></right-toolbar>
     </el-row>
@@ -78,15 +65,9 @@
       </el-table-column>
       <el-table-column label="操作" align="center" width="210" class-name="small-padding fixed-width">
         <template #default="scope">
-          <el-button link type="primary" icon="Edit" @click="handleUpdate(scope.row)" v-hasPermi="['system:menu:edit']">
-            修改
-          </el-button>
-          <el-button link type="primary" icon="Plus" @click="handleAdd(scope.row)" v-hasPermi="['system:menu:add']">
-            新增
-          </el-button>
-          <el-button link type="primary" icon="Delete" @click="handleDelete(scope.row)"
-                     v-hasPermi="['system:menu:remove']">删除
-          </el-button>
+          <el-button link type="primary" icon="Edit" @click="handleUpdate(scope.row)" v-if="hasPermission('system:menu:edit')">修改</el-button>
+          <el-button link type="primary" icon="Plus" @click="handleAdd(scope.row)" v-if="hasPermission('system:menu:add')">新增</el-button>
+          <el-button link type="primary" icon="Delete" @click="handleDelete(scope.row)" v-if="hasPermission('system:menu:remove')">删除</el-button>
         </template>
       </el-table-column>
     </el-table>
@@ -312,8 +293,9 @@ import {addMenu, delMenu, getMenu, listMenu, updateMenu} from "@/api/system/menu
 import SvgIcon from "@/components/SvgIcon"
 import IconSelect from "@/components/IconSelect"
 import {QuestionFilled} from "@element-plus/icons-vue";
-import {ElMessage} from "element-plus";
+import {ElMessage, ElMessageBox} from "element-plus";
 import dayjs from "dayjs";
+import {hasPermission} from "@/utils/permission.js";
 
 defineOptions({
   name: 'Menu'
@@ -405,7 +387,7 @@ function handleQuery() {
 
 /** 重置按钮操作 */
 function resetQuery() {
-  proxy.resetForm("queryRef")
+  proxy.$refs.queryRef && proxy.$refs.queryRef.resetFields()
   handleQuery()
 }
 
@@ -465,13 +447,16 @@ function submitForm() {
 
 /** 删除按钮操作 */
 function handleDelete(row) {
-  proxy.$modal.confirm('是否确认删除名称为"' + row.menuName + '"的数据项?').then(function () {
+  ElMessageBox.confirm('是否确认删除名称为"' + row.menuName + '"的数据项?', '提示', {
+    confirmButtonText: '确定',
+    cancelButtonText: '取消',
+    type: 'warning'
+  }).then(() => {
     return delMenu(row.menuId)
   }).then(() => {
     getList()
-    proxy.$modal.msgSuccess("删除成功")
-  }).catch(() => {
-  })
+    ElMessage.success("删除成功")
+  }).catch(() => {})
 }
 
 getList()

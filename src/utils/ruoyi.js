@@ -2,6 +2,7 @@
  * 通用js方法封装处理
  * Copyright (c) 2019 ruoyi
  */
+import dayjs from "dayjs";
 
 // 日期格式化
 export function parseTime(time, pattern) {
@@ -42,6 +43,11 @@ export function parseTime(time, pattern) {
     return value || 0
   })
   return time_str
+}
+
+// 日期格式化：YYYY-MM-DD HH:mm:ss
+export function parseDateTime(time) {
+  return time ? dayjs(time).format("YYYY-MM-DD HH:mm:ss")  : ''
 }
 
 // 表单重置

@@ -36,14 +36,13 @@
          </el-form-item>
          <el-form-item label="登录时间" style="width: 308px">
             <el-date-picker
-               v-model="dateRange"
-               value-format="YYYY-MM-DD HH:mm:ss"
+               v-model="queryParams.dateRange"
+               value-format="YYYY-MM-DD"
                type="daterange"
                range-separator="-"
                start-placeholder="开始日期"
                end-placeholder="结束日期"
-               :default-time="[new Date(2000, 1, 1, 0, 0, 0), new Date(2000, 1, 1, 23, 59, 59)]"
-            ></el-date-picker>
+            />
          </el-form-item>
          <el-form-item>
             <el-button type="primary" icon="Search" @click="handleQuery">搜索</el-button>
@@ -52,48 +51,22 @@
       </el-form>
 
       <el-row :gutter="10" class="mb8">
-         <el-col :span="1.5">
-            <el-button
-               type="danger"
-               plain
-               icon="Delete"
-               :disabled="multiple"
-               @click="handleDelete"
-               v-hasPermi="['monitor:login-log:remove']"
-            >删除</el-button>
+         <el-col :span="1.5" v-if="hasPermission('monitor:login-log:remove')">
+            <el-button type="danger" plain icon="Delete" @click="handleDelete" :disabled="multiple">删除</el-button>
          </el-col>
-         <el-col :span="1.5">
-            <el-button
-               type="danger"
-               plain
-               icon="Delete"
-               @click="handleClean"
-               v-hasPermi="['monitor:login-log:remove']"
-            >清空</el-button>
+         <el-col :span="1.5" v-if="hasPermission('monitor:login-log:remove')">
+            <el-button type="danger" plain icon="Delete" @click="handleClean" >清空</el-button>
          </el-col>
-         <el-col :span="1.5">
-            <el-button
-               type="primary"
-               plain
-               icon="Unlock"
-               :disabled="single"
-               @click="handleUnlock"
-               v-hasPermi="['monitor:login-log:unlock']"
-            >解锁</el-button>
+         <el-col :span="1.5" v-if="hasPermission('monitor:login-log:unlock')">
+            <el-button type="primary" plain icon="Unlock" @click="handleUnlock" :disabled="single">解锁</el-button>
          </el-col>
-         <el-col :span="1.5">
-            <el-button
-               type="warning"
-               plain
-               icon="Download"
-               @click="handleExport"
-               v-hasPermi="['monitor:login-log:export']"
-            >导出</el-button>
+         <el-col :span="1.5" v-if="hasPermission('monitor:login-log:export')">
+            <el-button type="warning" plain icon="Download" @click="handleExport">导出</el-button>
          </el-col>
          <right-toolbar v-model:showSearch="showSearch" @queryTable="getList"></right-toolbar>
       </el-row>
 
-      <el-table ref="logininforRef" v-loading="loading" :data="logininforList" @selection-change="handleSelectionChange" :default-sort="defaultSort" @sort-change="handleSortChange">
+      <el-table ref="loginInfoRef" v-loading="loading" :data="loginInfoList" @selection-change="handleSelectionChange" :default-sort="defaultSort" @sort-change="handleSortChange">
          <el-table-column type="selection" width="55" align="center" />
          <el-table-column label="访问编号" align="center" prop="logId" />
          <el-table-column label="用户名称" align="center" prop="username" :show-overflow-tooltip="true" sortable="custom" :sort-orders="['descending', 'ascending']" />
@@ -109,7 +82,7 @@
          <el-table-column label="描述" align="center" prop="msg" :show-overflow-tooltip="true" />
          <el-table-column label="访问时间" align="center" prop="loginTime" sortable="custom" :sort-orders="['descending', 'ascending']" width="180">
             <template #default="scope">
-               <span>{{ parseTime(scope.row.loginTime) }}</span>
+               <span>{{ parseDateTime(scope.row.loginTime) }}</span>
             </template>
          </el-table-column>
       </el-table>
@@ -125,9 +98,10 @@
 </template>
 
 <script setup>
-import {cleanLogin, unlockLogin, pageLogin, delLogin} from "@/api/monitor/login.js"
-import {addDateRange} from "@/utils/ruoyi.js";
+import {cleanLogin, unlockLogin, pageLogin, delLogin, sendLoginExport} from "@/api/monitor/login.js"
 import {ElMessage, ElMessageBox} from "element-plus";
+import {hasPermission} from "@/utils/permission.js";
+import {parseDateTime} from "@/utils/ruoyi.js";
 
 defineOptions({
   name: 'UserLoginLog'
@@ -136,7 +110,7 @@ defineOptions({
 const { proxy } = getCurrentInstance()
 const { sys_common_status } = proxy.useDict("sys_common_status")
 
-const logininforList = ref([])
+const loginInfoList = ref([])
 const loading = ref(true)
 const showSearch = ref(true)
 const selected = ref([])
@@ -144,7 +118,6 @@ const single = ref(true)
 const multiple = ref(true)
 const selectName = ref("")
 const total = ref(0)
-const dateRange = ref([])
 const defaultSort = ref({ prop: "loginTime", order: "descending" })
 
 const pages = ref({
@@ -157,6 +130,7 @@ const pages = ref({
 // 查询参数
 const queryParams = ref({
   pages: pages,
+  dateRange: [],
   ipaddr: undefined,
   username: undefined,
   status: undefined
@@ -165,8 +139,8 @@ const queryParams = ref({
 /** 查询登录日志列表 */
 function getList() {
   loading.value = true
-  pageLogin(addDateRange(queryParams.value, dateRange.value)).then(response => {
-    logininforList.value = response.data.records
+  pageLogin(queryParams.value).then(response => {
+    loginInfoList.value = response.data.records
     total.value = response.data.total
     loading.value = false
   })
@@ -180,10 +154,10 @@ function handleQuery() {
 
 /** 重置按钮操作 */
 function resetQuery() {
-  dateRange.value = []
-  proxy.resetForm("queryRef")
+  proxy.$refs.queryRef && proxy.$refs.queryRef.resetFields()
+  queryParams.value.dateRange = []
   pages.value.pageNum = 1
-  proxy.$refs["logininforRef"].sort(defaultSort.value.prop, defaultSort.value.order)
+  proxy.$refs["loginInfoRef"].sort(defaultSort.value.prop, defaultSort.value.order)
 }
 
 /** 多选框选中数据 */
@@ -195,7 +169,7 @@ function handleSelectionChange(selection) {
 }
 
 /** 排序触发事件 */
-function handleSortChange(column, prop, order) {
+function handleSortChange(column) {
   pages.value.orderByColumn = column.prop
   pages.value.isAsc = column.order
   getList()
@@ -224,29 +198,41 @@ function handleDelete(row) {
 
 /** 清空按钮操作 */
 function handleClean() {
-  proxy.$modal.confirm("是否确认清空所有登录日志数据项?").then(function () {
+  ElMessageBox.confirm('是否确认清空所有登录日志数据项?', '提示', {
+    confirmButtonText: '确定',
+    cancelButtonText: '取消',
+    type: 'warning'
+  }).then(() => {
     return cleanLogin()
   }).then(() => {
     getList()
-    proxy.$modal.msgSuccess("清空成功")
-  }).catch(() => {})
+    ElMessage.success("清空成功")
+  }).catch(() => {
+  })
 }
 
 /** 解锁按钮操作 */
 function handleUnlock() {
   const username = selectName.value
-  proxy.$modal.confirm('是否确认解锁用户"' + username + '"数据项?').then(function () {
+  ElMessageBox.confirm('是否确认解锁用户"' + username + '"数据项?', '提示', {
+    confirmButtonText: '确定',
+    cancelButtonText: '取消',
+    type: 'warning'
+  }).then(() => {
     return unlockLogin(username)
   }).then(() => {
-    proxy.$modal.msgSuccess("用户" + username + "解锁成功")
-  }).catch(() => {})
+    ElMessage.success("用户" + username + "解锁成功")
+  }).catch(() => {
+  })
 }
 
 /** 导出按钮操作 */
 function handleExport() {
-  proxy.download("monitor/login-log/export", {
-    ...queryParams.value,
-  }, `logininfor_${new Date().getTime()}.xlsx`)
+  sendLoginExport(queryParams.value)
+      .then(response => {
+        saveAs(response, `登录日志导出_${new Date().toLocaleString('zh-CN')}.xlsx`)
+        ElMessage.success('Success')
+      })
 }
 
 getList()

@@ -236,6 +236,7 @@ function handleQuery() {
 /** 重置按钮操作 */
 function resetQuery() {
   proxy.$refs.queryRef && proxy.$refs.queryRef.resetFields()
+  queryParams.value.dateRange = []
   handleQuery()
 }
 

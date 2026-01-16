@@ -69,3 +69,13 @@ export function refreshCache() {
     method: 'delete'
   })
 }
+
+
+export function sendConfigExport(data) {
+  return request({
+    url: '/system/config/export',
+    method: 'post',
+    data: data,
+    responseType: 'blob'
+  })
+}

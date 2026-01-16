@@ -62,7 +62,6 @@
 
 <script setup >
 import {authUserSelectAll, unallocatedUserPage} from "@/api/system/role"
-import {addDateRange} from "@/utils/ruoyi.js";
 import {ElMessage} from "element-plus";
 import dayjs from "dayjs";
 
@@ -90,7 +89,7 @@ const pages = ref({
   pageSize: 10
 })
 
-const queryParams = reactive({
+const queryParams = ref({
   pages: pages,
   roleId: undefined,
   userName: undefined,
@@ -99,7 +98,7 @@ const queryParams = reactive({
 
 // 显示弹框
 function show() {
-  queryParams.roleId = props.roleId
+  queryParams.value.roleId = props.roleId
   getList()
   visible.value = true
 }
@@ -116,7 +115,7 @@ function handleSelectionChange(selection) {
 
 // 查询表数据
 function getList() {
-  unallocatedUserPage(addDateRange(queryParams)).then(res => {
+  unallocatedUserPage(queryParams.value).then(res => {
     userList.value = res.data.records
     total.value = res.data.total
   })
@@ -137,7 +136,7 @@ function resetQuery() {
 const emit = defineEmits(["ok"])
 /** 选择授权用户操作 */
 function handleSelectUser() {
-  const roleId = queryParams.roleId
+  const roleId = queryParams.value.roleId
   if (userIds.value?.length === 0) {
     ElMessage.warning("请选择要分配的用户")
     return

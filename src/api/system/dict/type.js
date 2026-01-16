@@ -69,3 +69,13 @@ export function optionselect() {
     method: 'get'
   })
 }
+
+
+export function sendDictTypeExport(data) {
+  return request({
+    url: '/system/dict/type/export',
+    method: 'post',
+    data: data,
+    responseType: 'blob'
+  })
+}

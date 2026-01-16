@@ -36,12 +36,12 @@
          <el-table-column label="浏览器" align="center" prop="browser" :show-overflow-tooltip="true" />
          <el-table-column label="登录时间" align="center" prop="loginTime" width="180">
             <template #default="scope">
-               <span>{{ parseTime(scope.row.loginTime) }}</span>
+               <span>{{ parseDateTime(scope.row.loginTime) }}</span>
             </template>
          </el-table-column>
          <el-table-column label="操作" align="center" class-name="small-padding fixed-width">
             <template #default="scope">
-               <el-button link type="primary" icon="Delete" @click="handleForceLogout(scope.row)" v-hasPermi="['monitor:online:forceLogout']">强退</el-button>
+               <el-button link type="primary" icon="Delete" @click="handleForceLogout(scope.row)" v-if="hasPermission('monitor:online:forceLogout')">强退</el-button>
             </template>
          </el-table-column>
     </el-table>
@@ -56,9 +56,15 @@
    </div>
 </template>
 
-<script setup name="Online">
+<script setup>
 import {forceLogout, pageOnline} from "@/api/monitor/online"
-import {addDateRange} from "@/utils/ruoyi.js";
+import {parseDateTime} from "@/utils/ruoyi.js";
+import {hasPermission} from "@/utils/permission.js";
+import {ElMessage, ElMessageBox} from "element-plus";
+
+defineOptions({
+  name: 'Online'
+})
 
 const { proxy } = getCurrentInstance()
 
@@ -80,7 +86,7 @@ const queryParams = ref({
 /** 查询登录日志列表 */
 function getList() {
   loading.value = true
-  pageOnline(addDateRange(queryParams.value)).then(response => {
+  pageOnline(queryParams.value).then(response => {
     onlineList.value = response.data.records
     total.value = response.data.total
     loading.value = false
@@ -95,17 +101,21 @@ function handleQuery() {
 
 /** 重置按钮操作 */
 function resetQuery() {
-  proxy.resetForm("queryRef")
+  proxy.$refs.queryRef && proxy.$refs.queryRef.resetFields()
   handleQuery()
 }
 
 /** 强退按钮操作 */
 function handleForceLogout(row) {
-    proxy.$modal.confirm('是否确认强退名称为"' + row.userName + '"的用户?').then(function () {
-  return forceLogout(row.tokenId)
+  ElMessageBox.confirm('是否确认强退名称为"' + row.userName + '"的用户?', '提示', {
+    confirmButtonText: '确定',
+    cancelButtonText: '取消',
+    type: 'warning'
+  }).then(() => {
+    return forceLogout(row.tokenId)
   }).then(() => {
     getList()
-    proxy.$modal.msgSuccess("删除成功")
+    ElMessage.success("强退成功")
   }).catch(() => {})
 }
 

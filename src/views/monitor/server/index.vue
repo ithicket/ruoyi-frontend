@@ -171,6 +171,7 @@
 
 <script setup>
 import { getServer } from '@/api/monitor/server'
+import {CoffeeCup, Cpu, MessageBox, Monitor, Tickets} from "@element-plus/icons-vue";
 
 const server = ref([])
 const { proxy } = getCurrentInstance()
